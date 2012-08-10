@@ -1,0 +1,152 @@
+/*
+This file is part of glassfish-embedded-web.
+
+glassfish-embedded-web is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+glassfish-embedded-web is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+details.
+
+You should have received a copy of the GNU General Public License along with
+glassfish-embedded-web. If not, see <http://www.gnu.org/licenses/>.
+*/
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'maven'
+
+/************************
+extensions
+************************/
+project.ext.distDir = 'dist/'
+project.ext.distLibSubDir = "lib/"
+
+/************************
+repo config
+************************/
+repositories {
+  maven {
+    url 'http://repo.tehlulz.com:8081/artifactory/libs-release/'
+  }
+  maven {
+    url 'http://repo.tehlulz.com:8081/artifactory/libs-snapshot/'
+  }
+}
+
+/************************
+project configuration
+************************/
+project.version = '0.2-SNAPSHOT'
+targetCompatibility = 1.6
+sourceCompatibility = 1.6
+
+project.group = 'com.tehlulz.gradle.plugins'
+jar.baseName = 'tehlulz-'+project.name
+
+sourceSets {
+  eclipseJunitResources {
+    resources.srcDir file ('src/eclipse-junit-resources')
+  }
+}
+
+dependencies {
+  compile gradleApi()
+  compile "org.glassfish.main.extras:glassfish-embedded-web:3.1.2.2-SNAPSHOT"
+  compile "net.jcip:jcip-annotations:1.+@jar"
+  testCompile "junit:junit:4.+@jar"
+}
+
+/************************
+cache settings
+************************/
+configurations.all {
+  resolutionStrategy {
+    // cache dynamic versions for 10 minutes
+    cacheDynamicVersionsFor 10, 'minutes'
+
+    // don't cache changing modules at all
+    cacheChangingModulesFor 0, 'seconds'
+  }
+}
+
+/************************
+eclipse conveniences
+************************/
+eclipse.classpath.downloadSources = true
+eclipse.classpath.downloadJavadoc = true
+
+eclipse.classpath.defaultOutputDir = file('eclipse-build')
+
+// the following works only for java 1.6 and newer b/c the string has changed
+if (targetCompatibility >= JavaVersion.toVersion(1.6)) {
+  eclipse.classpath.containers.clear()
+  eclipse.classpath.containers.add('org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-' + targetCompatibility)
+}
+
+eclipse {
+  classpath {
+    plusConfigurations += sourceSets.eclipseJunitResources.getCompileClasspath() // make sure eclipse-junit-resources is added first
+    plusConfigurations += project.configurations.compile
+  }
+}
+
+/************************
+root proj. publishing 
+************************/
+configurations {
+     sources
+     javadocs
+}
+
+task packageJavadocs (type: Jar, dependsOn: 'javadoc') {
+     from project.javadoc.destinationDir
+     classifier = 'javadoc'
+     baseName = jar.baseName
+}
+task packageSources (type: Jar, dependsOn:classes) {
+     from project.sourceSets.main.allSource
+     classifier = 'sources'  // either here or in artifacts block
+     baseName = jar.baseName
+}
+
+artifacts {
+  sources (packageSources) {
+      type = 'jar'
+      classifier = 'sources' // either here or in packageSources
+  }
+
+  javadocs  (packageJavadocs) {
+      type = 'javadoc'
+      classifier = 'javadoc'
+  }
+}
+
+uploadArchives {
+  repositories.mavenDeployer {
+    ext.userAuth = {
+      authentication(userName: System.properties["tehlulzrepouser"], password: System.properties["tehlulzrepopass"])
+    }
+    snapshotRepository(url: 'http://repo.tehlulz.com:8081/artifactory/libs-snapshot-local', userAuth)
+    repository(url: 'http://repo.tehlulz.com:8081/artifactory/libs-release-local', userAuth)
+  }
+}
+
+task 'uploadSources'(type:Upload) {
+  repositories {
+      add uploadArchives.repositories.iterator().next()
+  }
+  configuration = configurations.sources
+}
+
+task 'uploadJavadocs'(type:Upload, dependsOn:'uploadSources') {
+  repositories {
+      add uploadArchives.repositories.iterator().next()
+  }
+  configuration = configurations.javadocs
+}
+
+project.uploadArchives.dependsOn 'uploadJavadocs' 
