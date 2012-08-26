@@ -1,5 +1,7 @@
 package com.tehlulz.gradle.plugins.glassfish;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -16,16 +18,22 @@ import org.gradle.logging.ProgressLoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.tehlulz.gradle.plugins.glassfish.AbstractGlassFishRunTask.GlassFishDeployUndeploy.GlassFishDeploymentException;
+
 /**
  * @author aslag
  */
 public abstract class AbstractGlassFishRunTask
   extends ConventionTask
 {
+  public static final String DEPLOY_EXIT_KEY = "x";
+  
+  static final Logger LOG = LoggerFactory.getLogger(AbstractGlassFishRunTask.class);
+
   protected GlassFish glassFish;
   
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractGlassFishRunTask.class);
-
+  protected GlassFishDeployUndeploy glassFishDeployUndeploy;
+  
   private String contextPath;
 
   private Integer httpPort;
@@ -52,8 +60,6 @@ public abstract class AbstractGlassFishRunTask
     
     GlassFishProperties gfProps = new GlassFishProperties();
     
-    
-    //TODO: make port user-configurable
     gfProps.setPort("http-listener", getHttpPort()); // refer to JavaDocs for the details of this API.
     
     try {
@@ -81,7 +87,7 @@ public abstract class AbstractGlassFishRunTask
     }
     
     // may block until user signals an exit
-    deployUndeployLoop();
+    deployUndeployLoop(glassFish);
     try {
       glassFish.stop();
     }
@@ -89,8 +95,46 @@ public abstract class AbstractGlassFishRunTask
       throw new GradleException("Failed to stop GlassFish server.", ex);
     }
   }
- 
-  protected abstract void deployUndeployLoop();
+
+  /**
+   * Blocks until user elects to exit
+   */
+  protected void deployUndeployLoop(GlassFish glassFish) {
+    while (true) {
+      ProgressLogger progressLogger = getServices().get(ProgressLoggerFactory.class).newOperation(AbstractGlassFishRunTask.class);
+      progressLogger.setDescription(String.format("Deploy archive %s", glassFishDeployUndeploy.getDeploymentName()));
+      progressLogger.setShortDescription(String.format("Deploying archive %s", glassFishDeployUndeploy.getDeploymentName()));
+      progressLogger.started();
+      
+      try {
+        glassFishDeployUndeploy.deploy(glassFish);
+      }
+      catch (GlassFishDeploymentException ex) {
+        throw new GradleException("Failed to deploy webapp in embedded GlassFish server.", ex);
+      } finally {
+        progressLogger.completed();
+      }
+      
+      System.out.println(String.format("\nApplication now available at http://localhost:%d/%s/", getHttpPort(), getContextPath()));
+      System.out.println("Hit ENTER to redeploy, "+DEPLOY_EXIT_KEY+" to exit");
+      String str;
+      try {
+          str = new BufferedReader(new InputStreamReader(System.in)).readLine();
+      } catch (Exception ex) {
+          throw new GradleException(ex.getMessage(), ex);
+      }
+      
+      try {
+        glassFishDeployUndeploy.undeploy(glassFish);
+      }
+      catch (GlassFishDeploymentException ex) {
+        throw new GradleException("Failed to undeploy webapp in embedded GlassFish server.", ex);
+      }
+      
+      if (str.equalsIgnoreCase(DEPLOY_EXIT_KEY)) 
+        break;
+    }
+  }
   
   /**
    * Returns the TCP port for GlassFish to listen on for incoming HTTP requests.
@@ -113,4 +157,27 @@ public abstract class AbstractGlassFishRunTask
   public void setContextPath(String contextPath) {
       this.contextPath = contextPath;
   }   
+  
+  public static interface GlassFishDeployUndeploy {
+    void deploy(GlassFish glassFish) throws GlassFishDeploymentException;
+    
+    void undeploy(GlassFish glassFish) throws GlassFishDeploymentException;
+    
+    String getDeploymentName();
+    
+    public static class GlassFishDeploymentException extends Exception {
+      public GlassFishDeploymentException() {
+        super();
+      }
+      
+      public GlassFishDeploymentException(String msg, Throwable th) {
+        super(msg, th);
+      }
+      
+      public GlassFishDeploymentException(Throwable th) {
+        super(th);
+      }
+    }
+
+  }
 }

@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License along with
 glassfish-embedded. If not, see <http://www.gnu.org/licenses/>.
 */
 
-apply plugin: 'java'
+apply plugin: 'groovy'
 apply plugin: 'eclipse'
 apply plugin: 'maven'
 
@@ -40,7 +40,7 @@ repositories {
 /************************
 project configuration
 ************************/
-project.version = '0.2-SNAPSHOT'
+project.version = '0.3-SNAPSHOT'
 targetCompatibility = 1.6
 sourceCompatibility = 1.6
 
@@ -53,11 +53,33 @@ sourceSets {
   }
 }
 
+configurations {
+  groovyEclipseSupport 
+
+  // ensure groovy is not a runtime dep for entire project, just tests (cf. http://issues.gradle.org/browse/GRADLE-1124)
+  compile.extendsFrom = []
+  testCompile.extendsFrom groovy
+}
+
 dependencies {
   compile gradleApi()
   compile "org.glassfish.main.extras:glassfish-embedded-web:3.1.2.2-SNAPSHOT"
   compile "net.jcip:jcip-annotations:1.+@jar"
-  testCompile "junit:junit:4.+@jar"
+
+  // Groovy, spock test support
+  def groovyVer = "1.8.6"
+  def groovyEclipseSupport186 = ['antlr:antlr:2.7.7@jar', 'asm:asm:3.2@jar', 'asm:asm-tree:3.2@jar', 'bsf:bsf:2.4.0@jar', 'commons-cli:commons-cli:1.2@jar', 'jline:jline:0.9.94@jar',]
+
+  groovy "org.codehaus.groovy:groovy-all:$groovyVer"
+  groovyEclipseSupport groovyEclipseSupport186
+
+  testCompile 'junit:junit:4.+'
+  testCompile "org.codehaus.groovy:groovy-all:$groovyVer"
+  testCompile ('org.spockframework:spock-core:0.6-groovy-1.8')
+  {
+    exclude group: 'org.codehaus.groovy' // don't bother with the version of groovy spock depends on
+  }
+
 }
 
 /************************
@@ -90,6 +112,7 @@ if (targetCompatibility >= JavaVersion.toVersion(1.6)) {
 eclipse {
   classpath {
     plusConfigurations += sourceSets.eclipseJunitResources.getCompileClasspath() // make sure eclipse-junit-resources is added first
+    plusConfigurations += configurations.groovyEclipseSupport // add groovySupport if on this project
     plusConfigurations += project.configurations.compile
   }
 }
@@ -137,14 +160,14 @@ uploadArchives {
 
 task 'uploadSources'(type:Upload) {
   repositories {
-      add uploadArchives.repositories.iterator().next()
+      addFirst uploadArchives.repositories.iterator().next()
   }
   configuration = configurations.sources
 }
 
 task 'uploadJavadocs'(type:Upload, dependsOn:'uploadSources') {
   repositories {
-      add uploadArchives.repositories.iterator().next()
+      addFirst uploadArchives.repositories.iterator().next()
   }
   configuration = configurations.javadocs
 }

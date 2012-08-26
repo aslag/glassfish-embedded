@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
  */
 public class GlassFishPlugin implements Plugin<Project>
 {
-  private static final Logger LOG = LoggerFactory.getLogger(GlassFishPlugin.class);
+  static final Logger LOG = LoggerFactory.getLogger(GlassFishPlugin.class);
   
   protected static final String GLASSFISH_RUN_WAR = "glassFishRunWar";
   

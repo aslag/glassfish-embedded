@@ -1,15 +1,10 @@
 package com.tehlulz.gradle.plugins.glassfish;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
 
-import org.glassfish.embeddable.Deployer;
+import org.glassfish.embeddable.GlassFish;
 import org.glassfish.embeddable.GlassFishException;
-import org.gradle.api.GradleException;
 import org.gradle.api.tasks.InputFile;
-import org.gradle.logging.ProgressLogger;
-import org.gradle.logging.ProgressLoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,9 +14,13 @@ import org.slf4j.LoggerFactory;
 public class GlassFishRunWar
   extends AbstractGlassFishRunTask
 {
-  private static final Logger LOG = LoggerFactory.getLogger(GlassFishRunWar.class);
+  static final Logger LOG = LoggerFactory.getLogger(GlassFishRunWar.class);
   
   private File webApp;
+  
+  public GlassFishRunWar() {
+    glassFishDeployUndeploy = new GlassFishWarDeployUndeploy();
+  }
   
   /**
    * Returns the web application to deploy.
@@ -35,50 +34,41 @@ public class GlassFishRunWar
       this.webApp = webApp;
   }
 
-  /**
-   * Blocks until user elects to leave
-   */
-  @Override
-  protected void deployUndeployLoop()
-  {
-    Deployer deployer;
-    while (true) {
-      ProgressLoggerFactory progressLoggerFactory = getServices().get(ProgressLoggerFactory.class);
-      ProgressLogger progressLogger = progressLoggerFactory.newOperation(AbstractGlassFishRunTask.class);
-      progressLogger.setDescription(String.format("Deploy archive %s", getWebApp().getName()));
-      progressLogger.setShortDescription(String.format("Deploying archive %s", getWebApp().getName()));
-      progressLogger.started();
-     
-      try {
-        deployer = glassFish.getDeployer();
-        deployer.deploy(getWebApp().toURI(), "--name="+getContextPath(), "--contextroot="+getContextPath());
-      }
-      catch (Exception ex) {
-        throw new GradleException("Failed to deploy webapp to embedded GlassFish server.", ex);
-      } finally {
-        progressLogger.completed();
-      }
-      
-      System.out.println(String.format("\nApplication now available at http://localhost:%d/%s/", getHttpPort(), getContextPath()));
-      System.out.println("Hit ENTER to redeploy, X to exit\n");
-      String str;
-      try {
-          str = new BufferedReader(new InputStreamReader(System.in)).readLine();
-      } catch (Exception ex) {
-          throw new GradleException(ex.getMessage(), ex);
-      }
+  protected class GlassFishWarDeployUndeploy implements GlassFishDeployUndeploy {
+    @Override
+    public void deploy(GlassFish glassFish)
+      throws GlassFishDeploymentException
+    {
+      if (glassFish == null)
+        throw new RuntimeException("Reference to GlassFish runtime is null and must not be; cannot deploy.");
       
       try {
-        deployer.undeploy(getContextPath());
+        glassFish.getDeployer().deploy(getWebApp().toURI(), "--name="+getContextPath(), "--contextroot="+getContextPath());
       }
       catch (GlassFishException ex) {
-        throw new GradleException("Failed to undeploy webapp in embedded GlassFish server.", ex);
+        throw new GlassFishDeploymentException("Deployment to GlassFish failed.", ex);
       }
+    }
+    
+    @Override
+    public void undeploy(GlassFish glassFish)
+      throws GlassFishDeploymentException
+    {
+      if (glassFish == null)
+        throw new RuntimeException("Reference to GlassFish runtime is null and must not be; cannot deploy.");
       
-      if (str.equalsIgnoreCase("x")) 
-        break;
+      try {
+        glassFish.getDeployer().undeploy(getContextPath());
+      }
+      catch (GlassFishException ex) {
+        throw new GlassFishDeploymentException("Undeployment from GlassFish failed.", ex);
+      }
+    }
+    
+    @Override
+    public String getDeploymentName() {
+      return getWebApp().getName();
     }
     
   }
-
 }
