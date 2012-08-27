@@ -30,8 +30,6 @@ public abstract class AbstractGlassFishRunTask
   
   static final Logger LOG = LoggerFactory.getLogger(AbstractGlassFishRunTask.class);
 
-  protected GlassFish glassFish;
-  
   protected GlassFishDeployUndeploy glassFishDeployUndeploy;
   
   private String contextPath;
@@ -75,7 +73,8 @@ public abstract class AbstractGlassFishRunTask
     catch (Exception ex) {
       LOG.error("Failed to configure GlassFish logging, logging only errors to console.");
     }
-    
+   
+    GlassFish glassFish;
     try {
       glassFish = GlassFishRuntime.bootstrap().newGlassFish(gfProps);
       glassFish.start();

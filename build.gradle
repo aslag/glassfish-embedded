@@ -75,10 +75,13 @@ dependencies {
 
   testCompile 'junit:junit:4.+'
   testCompile "org.codehaus.groovy:groovy-all:$groovyVer"
-  testCompile ('org.spockframework:spock-core:0.6-groovy-1.8')
+  testCompile ('org.spockframework:spock-core:0.6-groovy-1.8') 
   {
     exclude group: 'org.codehaus.groovy' // don't bother with the version of groovy spock depends on
   }
+  // optional dependencies for spock that improve its mocking capacity
+  testCompile 'cglib:cglib-nodep:2+'
+  testCompile 'org.objenesis:objenesis:1+'
 
 }
 
