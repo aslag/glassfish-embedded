@@ -8,6 +8,8 @@ import org.gradle.api.tasks.InputFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.tehlulz.gradle.plugins.glassfish.GlassFishServerHandler.GlassFishDeployUndeploy;
+
 /**
  * @author aslag
  */

@@ -30,10 +30,13 @@ repo config
 ************************/
 repositories {
   maven {
-    url 'http://repo.tehlulz.com:8081/artifactory/libs-release/'
+    url 'http://repo.tehlulz.com:8081/artifactory/libs-fork-local/'
   }
   maven {
     url 'http://repo.tehlulz.com:8081/artifactory/libs-snapshot/'
+  }
+  maven {
+    url 'http://repo.tehlulz.com:8081/artifactory/libs-release/'
   }
 }
 
@@ -67,15 +70,26 @@ dependencies {
   compile "net.jcip:jcip-annotations:1.+@jar"
 
   // Groovy, spock test support
-  def groovyVer = "1.8.6"
-  def groovyEclipseSupport186 = ['antlr:antlr:2.7.7@jar', 'asm:asm:3.2@jar', 'asm:asm-tree:3.2@jar', 'bsf:bsf:2.4.0@jar', 'commons-cli:commons-cli:1.2@jar', 'jline:jline:0.9.94@jar',]
+  def groovyVer = "2.0.+"
+  def groovyEclipseSupport20 = [
+    'antlr:antlr:2.7.7',
+    'org.ow2.asm:asm:4.0',
+    'org.ow2.asm:asm-util:4.0',
+    'org.ow2.asm:asm-analysis:4.0',
+    'org.ow2.asm:asm-commons:4.0',
+    'org.codehaus.gpars:gpars:1.0-beta-2',
+    'org.fusesource.jansi:jansi:1.6',
+    'commons-cli:commons-cli:1.2',
+    'jline:jline:1.0',
+    'com.thoughtworks.xstream:xstream:1.4.2'
+]
 
   groovy "org.codehaus.groovy:groovy-all:$groovyVer"
-  groovyEclipseSupport groovyEclipseSupport186
+  groovyEclipseSupport groovyEclipseSupport20
 
   testCompile 'junit:junit:4.+'
   testCompile "org.codehaus.groovy:groovy-all:$groovyVer"
-  testCompile ('org.spockframework:spock-core:0.6-groovy-1.8') 
+  testCompile ('org.spockframework:spock-core:0.7-groovy-2.0-SNAPSHOT') 
   {
     exclude group: 'org.codehaus.groovy' // don't bother with the version of groovy spock depends on
   }
