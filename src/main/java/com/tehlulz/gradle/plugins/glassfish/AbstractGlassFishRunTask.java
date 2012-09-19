@@ -36,6 +36,18 @@ public abstract class AbstractGlassFishRunTask
   private String contextPath;
 
   private Integer httpPort;
+  
+  private boolean ssl;
+  
+  private String keyStore;
+  
+  private String keyStorePassword;
+  
+  private String keyStoreAlias;
+  
+  private String trustStore;
+  
+  private String trustStorePassword;
 
   @TaskAction
   protected void start()
@@ -49,20 +61,36 @@ public abstract class AbstractGlassFishRunTask
     //TODO: add flexible runtimejar loading here
 
     try {
-      //TODO: do this only selectively
+      //TODO: do this logging mischief only selectively
+      java.util.logging.Logger rootLogger = java.util.logging.Logger.getLogger("");
+      
+      // remove existing handlers
+      Handler[] handlers = rootLogger.getHandlers();
+      for (int i = 0; i < handlers.length; i++) {
+          rootLogger.removeHandler(handlers[i]);
+      }
+      
+      // register logging to file
       Handler gfLogHandler = new FileHandler(getProject().getProjectDir().getPath() + "/glassfish-embedded.log", true);
       gfLogHandler.setLevel(Level.FINEST);
       gfLogHandler.setFormatter(new SimpleFormatter());
 
       // remember that "" picks out the root logger
-      java.util.logging.Logger.getLogger("").addHandler(gfLogHandler);
+      rootLogger.addHandler(gfLogHandler);
     }
     catch (Exception ex) {
       LOG.error("Failed to configure GlassFish logging, logging only errors to console.");
     }
   
     try {
-      glassFishServerHandler.startGlassFish(getHttpPort());
+      //TODO: rework this part once a better scheme for configuring listeners is figured out
+      if (!ssl) {
+        LOG.info(String.format("Configuring GlassFish listener; using port %d", getHttpPort()));
+        glassFishServerHandler.startGlassFish(getHttpPort());
+      } else {
+        LOG.info(String.format("Configuring SSL GlassFish listener; using port %d", getHttpPort()));
+        glassFishServerHandler.startGlassFish(getHttpPort(), getKeyStore(), getKeyStorePassword(), getKeyStoreAlias(), getTrustStore(), getTrustStorePassword());
+      }
       
     } catch (GlassFishException ex) {
       throw new GradleException("Failed to run GlassFish server.", ex);
@@ -153,5 +181,59 @@ public abstract class AbstractGlassFishRunTask
   public void setContextPath(String contextPath)
   {
     this.contextPath = contextPath;
+  }
+  
+  public void setSsl(boolean ssl) {
+    this.ssl = ssl;
+  }
+
+  public String getKeyStore()
+  {
+    return keyStore;
+  }
+
+  public void setKeyStore(String keyStore)
+  {
+    this.keyStore = keyStore;
+  }
+
+  public String getKeyStorePassword()
+  {
+    return keyStorePassword;
+  }
+
+  public void setKeyStorePassword(String keyStorePassword)
+  {
+    this.keyStorePassword = keyStorePassword;
+  }
+
+  public String getKeyStoreAlias()
+  {
+    return keyStoreAlias;
+  }
+
+  public void setKeyStoreAlias(String keyStoreAlias)
+  {
+    this.keyStoreAlias = keyStoreAlias;
+  }
+
+  public String getTrustStore()
+  {
+    return trustStore;
+  }
+
+  public void setTrustStore(String trustStore)
+  {
+    this.trustStore = trustStore;
+  }
+
+  public String getTrustStorePassword()
+  {
+    return trustStorePassword;
+  }
+
+  public void setTrustStorePassword(String trustStorePassword)
+  {
+    this.trustStorePassword = trustStorePassword;
   }
 }

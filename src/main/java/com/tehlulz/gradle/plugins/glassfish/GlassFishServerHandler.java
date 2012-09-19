@@ -1,9 +1,16 @@
 package com.tehlulz.gradle.plugins.glassfish;
 
+import java.io.File;
+
 import org.glassfish.embeddable.GlassFish;
 import org.glassfish.embeddable.GlassFishException;
-import org.glassfish.embeddable.GlassFishProperties;
 import org.glassfish.embeddable.GlassFishRuntime;
+import org.glassfish.embeddable.web.ConfigException;
+import org.glassfish.embeddable.web.HttpListener;
+import org.glassfish.embeddable.web.HttpsListener;
+import org.glassfish.embeddable.web.WebContainer;
+import org.glassfish.embeddable.web.WebListenerBase;
+import org.glassfish.embeddable.web.config.SslConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,11 +37,65 @@ public class GlassFishServerHandler
   public void startGlassFish(Integer httpPort)
     throws GlassFishException
   {
-    GlassFishProperties gfProps = new GlassFishProperties();
+    HttpListener listener = new HttpListener("http-listener-gfembed", httpPort);
+    listener.setProtocol("http");
+    startGlassFish(listener);
+  }
 
-    gfProps.setPort("http-listener", httpPort); // refer to JavaDocs for the details of this API.
-    glassFish = GlassFishRuntime.bootstrap().newGlassFish(gfProps);
+
+  //TODO: this way seems busted; glassfish doesn't seem to care about these settings when it sets up a keystore, it seems to read system properties from javax.net.ssl instead
+  public void startGlassFish(Integer httpPort,
+                             String keyStore,
+                             String keyStorePassword,
+                             String keyStoreAlias,
+                             String trustStore,
+                             String trustStorePassword)
+    throws GlassFishException
+  {
+    HttpsListener listener = new HttpsListener("https-listener-gfembed", httpPort);
+    listener.setProtocol("https");
+   
+    if (keyStore == null || !(new File(keyStore).canRead())) {
+      throw new GlassFishException(String.format("Cannot read specified keyStore %s; GlassFish startup aborted.", keyStore));
+    }
+    
+    if (trustStore == null || !(new File(trustStore).canRead())) {
+      throw new GlassFishException(String.format("Cannot read specified trustStore %s; GlassFish startup aborted.", trustStore));
+    }
+    
+    SslConfig sslConfig = new SslConfig(keyStore, trustStore);
+   
+    //TODO: do user a favor here and check the keystore, truststore by opening them with passwords, checking for aliases, etc. before trying to configure glassfish with them and deploy
+    
+    if (keyStoreAlias != null) {
+      sslConfig.setCertNickname(keyStoreAlias);
+    }
+    
+    if (keyStorePassword != null) {
+      sslConfig.setKeyPassword(keyStorePassword.toCharArray());
+    }
+    
+    if (trustStorePassword != null) {
+      sslConfig.setTrustPassword(trustStorePassword.toCharArray());
+    }
+    
+    listener.setSslConfig(sslConfig);
+    startGlassFish(listener);
+  }
+  
+  protected void startGlassFish(WebListenerBase listener) 
+    throws GlassFishException
+  {
+    glassFish = GlassFishRuntime.bootstrap().newGlassFish();
     glassFish.start();
+    WebContainer webContainer = glassFish.getService(WebContainer.class);
+    
+    try {
+      webContainer.addWebListener(listener);
+    }
+    catch (ConfigException ex) {
+      throw new GlassFishException(ex);
+    }
   }
   
   public void stopGlassFish()
@@ -84,4 +145,5 @@ public class GlassFishServerHandler
       }
     }
   }
+
 }

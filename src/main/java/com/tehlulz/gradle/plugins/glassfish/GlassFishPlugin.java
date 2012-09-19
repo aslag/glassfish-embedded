@@ -92,7 +92,36 @@ public class GlassFishPlugin implements Plugin<Project>
           return glassFishPluginConvention.getHttpPort();
       }
     });
-
+    abstractGlassFishRunTask.getConventionMapping().map("ssl", new Callable<Object>() {
+      public Object call() throws Exception {
+          return glassFishPluginConvention.getSsl();
+      }
+    });
+    abstractGlassFishRunTask.getConventionMapping().map("keyStore", new Callable<Object>() {
+      public Object call() throws Exception {
+          return glassFishPluginConvention.getKeyStore();
+      }
+    });
+    abstractGlassFishRunTask.getConventionMapping().map("keyStorePassword", new Callable<Object>() {
+      public Object call() throws Exception {
+          return glassFishPluginConvention.getKeyStorePassword();
+      }
+    });
+    abstractGlassFishRunTask.getConventionMapping().map("keyStoreAlias", new Callable<Object>() {
+      public Object call() throws Exception {
+          return glassFishPluginConvention.getKeyStoreAlias();
+      }
+    });
+    abstractGlassFishRunTask.getConventionMapping().map("trustStore", new Callable<Object>() {
+      public Object call() throws Exception {
+          return glassFishPluginConvention.getTrustStore();
+      }
+    });
+    abstractGlassFishRunTask.getConventionMapping().map("trustStorePassword", new Callable<Object>() {
+      public Object call() throws Exception {
+          return glassFishPluginConvention.getTrustStorePassword();
+      }
+    });
 	}
 
   public JavaPluginConvention getJavaConvention(Project project)

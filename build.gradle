@@ -43,7 +43,7 @@ repositories {
 /************************
 project configuration
 ************************/
-project.version = '0.3-SNAPSHOT'
+project.version = '0.3.4-SNAPSHOT'
 targetCompatibility = 1.6
 sourceCompatibility = 1.6
 
@@ -66,11 +66,24 @@ configurations {
 
 dependencies {
   compile gradleApi()
-  compile "org.glassfish.main.extras:glassfish-embedded-web:3.1.2.2-SNAPSHOT"
-  compile "net.jcip:jcip-annotations:1.+@jar"
+
+  /* Logging strategy:
+
+   * The plugin itself uses slf4j; messages are handled by Gradle at runtime.
+   * GlassFish's logging is handled by JUL; this is redirected to 
+   * glassfish-embed.log at the FINEST level. 
+
+   * Hosted applications that use slf4j will have their config files 
+   * (Logback.xml, log4j.properties) ignored. Output is sent to stdout by 
+   * Gradle. TODO: fix this!
+   */
+  compile 'org.slf4j:slf4j-api:1.+'
+
+  compile 'org.glassfish.main.extras:glassfish-embedded-web:3.1.2.2'
+  compile 'net.jcip:jcip-annotations:1.+@jar'
 
   // Groovy, spock test support
-  def groovyVer = "2.0.+"
+  def groovyVer = '2.0.+'
   def groovyEclipseSupport20 = [
     'antlr:antlr:2.7.7',
     'org.ow2.asm:asm:4.0',
